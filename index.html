@@ -1,224 +1,470 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
-  <style>
-    canvas {
-      border: 1px solid black;
-    }
-
-    /* Estilos para pantallas pequeñas */
-    @media screen and (max-width: 600px) {
-      h1 {
-        font-size: 20px;
-      }
-      label {
-        font-size: 14px;
-      }
-      input, select, textarea {
-        font-size: 12px;
-      }
-      button {
-        font-size: 14px;
-      }
-    }
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Optimizador de Corte de Madera (2D)</title>
+<style>
+  :root {
+    --bg: #0b0d10;
+    --card: #12161c;
+    --ink: #e6eef8;
+    --muted: #9fb0c3;
+    --accent: #6ee7ff;
+    --warn: #ffc857;
+    --bad: #ff6b6b;
+    --good: #38d39f;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial;
+    color: var(--ink); background: radial-gradient(1200px 800px at 10% -10%, #13202f, #0b0d10);
+  }
+  header { padding: 18px 20px 8px; }
+  h1 { margin: 0 0 6px; font-size: 22px; letter-spacing: .2px;}
+  p.sub { margin: 0; color: var(--muted); font-size: 14px;}
+  .wrap {
+    display: grid; gap: 16px; padding: 16px; grid-template-columns: 360px 1fr;
+  }
+  @media (max-width: 980px) { .wrap { grid-template-columns: 1fr; } }
+  .card {
+    background: linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.01));
+    border: 1px solid rgba(255,255,255,.08);
+    border-radius: 14px; padding: 14px;
+    box-shadow: 0 8px 30px rgba(0,0,0,.35);
+  }
+  fieldset { border: none; padding: 0; margin: 0 0 10px; }
+  legend { font-weight: 600; margin-bottom: 6px; }
+  label { display: block; font-size: 13px; color: var(--muted); margin-top: 8px; }
+  input[type="number"], input[type="text"] {
+    width: 100%; padding: 10px 12px; border-radius: 10px;
+    border: 1px solid rgba(255,255,255,.12); background: #0f1319; color: var(--ink);
+    outline: none;
+  }
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+  .row4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px; }
+  .actions { display: flex; gap: 10px; margin-top: 12px; }
+  button {
+    border: none; padding: 10px 14px; border-radius: 10px; cursor: pointer; font-weight: 600;
+    background: var(--accent); color: #0b0d10;
+  }
+  button.secondary { background: #1b2330; color: var(--ink); border: 1px solid rgba(255,255,255,.12); }
+  button.ghost { background: transparent; color: var(--muted); border: 1px dashed rgba(255,255,255,.18); }
+  .warn { color: var(--warn); }
+  .bad { color: var(--bad); }
+  .good { color: var(--good); }
+  table { width: 100%; border-collapse: collapse; margin-top: 6px; }
+  th, td { border-bottom: 1px solid rgba(255,255,255,.08); padding: 6px; text-align: left; font-size: 13px;}
+  th { color: var(--muted); font-weight: 500; }
+  canvas { width: 100%; height: 620px; background: #0f1319; border-radius: 10px; border: 1px solid rgba(255,255,255,.08); }
+  .legend { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 999px; border: 1px solid rgba(255,255,255,.12); background: #0f1319; font-size: 12px; }
+  .dot { width: 14px; height: 14px; border-radius: 50%; display: inline-block; }
+  .metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 10px; }
+  .metric { background: #0f1319; border: 1px solid rgba(255,255,255,.08); border-radius: 10px; padding: 10px; }
+  .metric b { font-size: 18px; display: block; }
+  small.hint { color: var(--muted); display:block; margin-top: 4px; }
+</style>
 </head>
 <body>
-  <h1>Cálculo de corte de madera</h1>
-  <form id="formulario">
-    <label for="alto">Alto de la madera (cm):</label>
-    <input type="number" id="alto" required>
-    <br>
-    <label for="ancho">Ancho de la madera (cm):</label>
-    <input type="number" id="ancho" required>
-    <br>
-    <label for="grosor">Grosor de la madera (cm):</label>
-    <input type="number" id="grosor" required>
-    <br>
-    <label for="p1">Pedazo 1 (alto x ancho x grosor):</label>
-    <input type="text" id="p1" required>
-    <br>
-    <label for="p2">Pedazo 2 (alto x ancho x grosor):</label>
-    <input type="text" id="p2" required>
-    <br>
-    <label for="p3">Pedazo 3 (alto x ancho x grosor):</label>
-    <input type="text" id="p3" required>
-    <br>
-    <button type="submit">Calcular</button>
-  </form>
-  <canvas id="grafico" width="800" height="600"></canvas>
+<header>
+  <h1>Optimizador de corte de madera</h1>
+  <p class="sub">Heurística guillotine 2D con rotación opcional · Canvas en tiempo real · Aprovechamiento y desperdicio</p>
+</header>
 
-  <script>
-    var canvas = document.getElementById("grafico");
-    var ctx = canvas.getContext("2d");
-    var colores = ["green", "blue", "orange"];
+<div class="wrap">
+  <!-- Panel de control -->
+  <section class="card">
+    <form id="form">
+      <fieldset>
+        <legend>Tabla (cm)</legend>
+        <div class="row3">
+          <div>
+            <label for="boardW">Ancho</label>
+            <input id="boardW" type="number" min="1" step="0.1" required value="200">
+          </div>
+          <div>
+            <label for="boardH">Alto</label>
+            <input id="boardH" type="number" min="1" step="0.1" required value="120">
+          </div>
+          <div>
+            <label for="boardT">Grosor</label>
+            <input id="boardT" type="number" min="0.1" step="0.1" value="2">
+          </div>
+        </div>
+        <label><input id="allowRotate" type="checkbox" checked> Permitir rotar piezas 90°</label>
+        <small class="hint">El grosor no afecta el layout 2D (sirve como dato de referencia).</small>
+      </fieldset>
 
-    // Definir una función para dibujar un rectángulo en el canvas
-    function dibujarRectangulo(x, y, ancho, alto, color, texto) {
-      ctx.fillStyle = color;
-      ctx.fillRect(x, y, ancho, alto);
+      <fieldset>
+        <legend>Pedazos (cm) y cantidades</legend>
+        <div class="actions">
+          <button id="addRow" type="button" class="ghost">+ Agregar pedazo</button>
+          <button id="clearRows" type="button" class="secondary">Vaciar lista</button>
+        </div>
+        <table id="piecesTable">
+          <thead>
+            <tr>
+              <th>Nombre</th>
+              <th>Ancho</th>
+              <th>Alto</th>
+              <th>Cant.</th>
+              <th>Rot.</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody><!-- filas dinámicas --></tbody>
+        </table>
+        <small class="hint">Tip: probá con piezas variadas para ver el algoritmo trabajar.</small>
+      </fieldset>
 
-      ctx.fillStyle = "black";
-      ctx.font = "12px Arial";
-      ctx.textAlign = "center"; // Centrar el texto horizontalmente
-      ctx.textBaseline = "middle"; // Centrar el texto verticalmente
+      <div class="actions">
+        <button type="submit">Calcular corte</button>
+        <button id="demoBtn" type="button" class="secondary">Cargar demo</button>
+        <button id="exportBtn" type="button" class="secondary">Descargar PNG</button>
+      </div>
+      <div id="msg" style="margin-top:8px;"></div>
+    </form>
 
-      // Obtener las dimensiones del texto
-      var textWidth = ctx.measureText(texto).width;
-      var textHeight = 12; // Tamaño de fuente fijo
+    <div class="metrics">
+      <div class="metric"><span>Aprovechamiento</span><b id="utilPct">—</b></div>
+      <div class="metric"><span>Desperdicio</span><b id="wastePct">—</b></div>
+      <div class="metric"><span>Piezas ubicadas</span><b id="placedCount">—</b></div>
+    </div>
+    <div class="legend" id="legend"></div>
+  </section>
 
-      // Calcular las coordenadas para centrar el texto dentro del rectángulo
-      var textX = x + (ancho / 2);
-      var textY = y + (alto / 2);
+  <!-- Canvas -->
+  <section class="card">
+    <canvas id="cnv" width="1400" height="900"></canvas>
+  </section>
+</div>
 
-      ctx.fillText(texto, textX, textY);
+<script>
+(function(){
+  const $ = s => document.querySelector(s);
+  const $$ = s => Array.from(document.querySelectorAll(s));
+  const cnv = $('#cnv');
+  const ctx = cnv.getContext('2d');
+
+  // Utilidad: parsea números aceptando coma o punto
+  const num = v => parseFloat(String(v).replace(',', '.'));
+
+  // Colores bonitos, generados por HSL
+  function colorFor(i, a=0.85) {
+    const h = (i * 137.508) % 360; // número áureo para separar tonos
+    return `hsla(${h}, 65%, 55%, ${a})`;
+  }
+
+  // --- Manejo de filas de piezas ---
+  const tbody = $('#piecesTable tbody');
+  function addPieceRow(data={name:'Pieza', w:30, h:20, q:1, rot:true}) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><input type="text" value="${data.name}" /></td>
+      <td><input type="number" min="0.1" step="0.1" value="${data.w}" /></td>
+      <td><input type="number" min="0.1" step="0.1" value="${data.h}" /></td>
+      <td><input type="number" min="1" step="1" value="${data.q}" /></td>
+      <td style="text-align:center;"><input type="checkbox" ${data.rot ? 'checked':''} /></td>
+      <td><button type="button" class="ghost">✕</button></td>
+    `;
+    tbody.appendChild(tr);
+    tr.querySelector('button').addEventListener('click', ()=> tr.remove());
+  }
+  $('#addRow').addEventListener('click', ()=> addPieceRow());
+  $('#clearRows').addEventListener('click', ()=> { tbody.innerHTML=''; updateLegend([]); });
+
+  // Cargar demo
+  $('#demoBtn').addEventListener('click', ()=>{
+    tbody.innerHTML='';
+    addPieceRow({name:'Lateral', w:60, h:25, q:2, rot:true});
+    addPieceRow({name:'Estante', w:80, h:20, q:3, rot:true});
+    addPieceRow({name:'Puerta', w:40, h:60, q:1, rot:false});
+    addPieceRow({name:'Refuerzo', w:30, h:10, q:4, rot:true});
+  });
+
+  // Exportar PNG
+  $('#exportBtn').addEventListener('click', ()=>{
+    const link = document.createElement('a');
+    link.download = 'corte.png';
+    link.href = cnv.toDataURL('image/png');
+    link.click();
+  });
+
+  // --- Dibujo ---
+  function drawBoard(boardW, boardH, placed) {
+    ctx.clearRect(0,0,cnv.width,cnv.height);
+
+    const pad = 40;
+    const scale = Math.min(
+      (cnv.width - pad*2) / boardW,
+      (cnv.height - pad*2) / boardH
+    );
+
+    // Fondo y tablero
+    ctx.fillStyle = '#0b1118';
+    ctx.fillRect(0,0,cnv.width,cnv.height);
+
+    const ox = (cnv.width - boardW*scale)/2;
+    const oy = (cnv.height - boardH*scale)/2;
+
+    // Madera
+    ctx.fillStyle = '#1a2431';
+    ctx.strokeStyle = 'rgba(255,255,255,.15)';
+    ctx.lineWidth = 2;
+    ctx.fillRect(ox, oy, boardW*scale, boardH*scale);
+    ctx.strokeRect(ox, oy, boardW*scale, boardH*scale);
+
+    // Rejilla ligera (cada 10cm aprox)
+    const grid = 10;
+    ctx.strokeStyle = 'rgba(255,255,255,.06)';
+    ctx.lineWidth = 1;
+    for (let x=0; x<=boardW; x+=grid) {
+      const gx = ox + x*scale;
+      ctx.beginPath(); ctx.moveTo(gx, oy); ctx.lineTo(gx, oy+boardH*scale); ctx.stroke();
+    }
+    for (let y=0; y<=boardH; y+=grid) {
+      const gy = oy + y*scale;
+      ctx.beginPath(); ctx.moveTo(ox, gy); ctx.lineTo(ox+boardW*scale, gy); ctx.stroke();
     }
 
-    // Definir una función para dibujar la regla
-    function dibujarRegla(ancho, alto) {
-      var numMarcas = ancho / 30;
+    // Piezas colocadas
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    for (const p of placed) {
+      ctx.fillStyle = colorFor(p.colorIndex);
+      ctx.fillRect(ox + p.x*scale, oy + p.y*scale, p.w*scale, p.h*scale);
+      ctx.strokeStyle = 'rgba(0,0,0,.25)';
+      ctx.strokeRect(ox + p.x*scale, oy + p.y*scale, p.w*scale, p.h*scale);
 
-      ctx.fillStyle = "black";
-      ctx.font = "12px Arial";
-      ctx.textAlign = "center";
-
-      for (var i = 0; i <= numMarcas; i++) {
-        var x = i * (ancho / numMarcas);
-        var y = alto + 20;
-
-        ctx.beginPath();
-        ctx.moveTo(x, alto);
-        ctx.lineTo(x, alto + 10);
-        ctx.stroke();
-
-        ctx.fillText(i + " cm", x, y);
-      }
+      // Etiqueta
+      ctx.fillStyle = 'rgba(0,0,0,.7)';
+      const label = `${p.name} (${p.w}×${p.h} cm)`;
+      const cx = ox + (p.x + p.w/2)*scale;
+      const cy = oy + (p.y + p.h/2)*scale;
+      ctx.font = '12px system-ui';
+      // Sombra para legibilidad
+      ctx.save();
+      ctx.shadowColor = 'rgba(0,0,0,.6)';
+      ctx.shadowBlur = 4;
+      ctx.shadowOffsetY = 1;
+      ctx.fillText(label, cx, cy);
+      ctx.restore();
     }
 
-    // Definir una función para limpiar el canvas
-    function limpiarCanvas() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // Regla inferior (cada 10 cm)
+    ctx.fillStyle = '#cdd9e5';
+    ctx.font = '12px system-ui';
+    for (let x=0; x<=boardW; x+=10) {
+      const gx = ox + x*scale;
+      ctx.fillRect(gx, oy+boardH*scale, 1, 8);
+      ctx.fillText(x.toString(), gx, oy+boardH*scale+16);
     }
-
-    // Definir una función para validar las medidas de los pedazos
-    function validarMedidas(medidas) {
-      var partes = medidas.split("x");
-      if (partes.length !== 3) {
-        return false;
-      }
-      var alto = parseInt(partes[0]);
-      var ancho = parseInt(partes[1]);
-      var grosor = parseInt(partes[2]);
-      if (isNaN(alto) || isNaN(ancho) || isNaN(grosor)) {
-        return false;
-      }
-      return { alto: alto, ancho: ancho, grosor: grosor };
+    for (let y=0; y<=boardH; y+=10) {
+      const gy = oy + y*scale;
+      ctx.fillRect(ox-8, gy, 8, 1);
+      ctx.fillText(y.toString(), ox-18, gy+2);
     }
+  }
 
-    // Definir una función para calcular el corte de la madera
-    function calcularCorte(altoMadera, anchoMadera, grosorMadera, pedazos) {
-      // Crear una matriz de ceros del tamaño de la madera
-      var matriz = [];
-      for (var i = 0; i < altoMadera; i++) {
-        matriz[i] = [];
-        for (var j = 0; j < anchoMadera; j++) {
-          matriz[i][j] = 0;
+  function updateLegend(placed) {
+    const box = $('#legend');
+    box.innerHTML = '';
+    const groups = {};
+    placed.forEach(p=>{
+      const key = p.name + ' ' + p.w + '×' + p.h;
+      if (!groups[key]) groups[key] = {colorIndex: p.colorIndex, name:p.name, w:p.w, h:p.h, count:0};
+      groups[key].count++;
+    });
+    Object.values(groups).forEach((g,i)=>{
+      const chip = document.createElement('div');
+      chip.className = 'chip';
+      chip.innerHTML = `<span class="dot" style="background:${colorFor(g.colorIndex)}"></span> ${g.name} ${g.w}×${g.h} · x${g.count}`;
+      box.appendChild(chip);
+    });
+  }
+
+  // --- Heurística tipo guillotine ---
+  // Free-rects comienza con un rectángulo igual a la tabla.
+  // Para cada pieza, elegimos el rect libre donde quepa y deje menor desperdicio local.
+  // Colocamos en la esquina sup-izq del rect libre y lo partimos en 2 (derecha y abajo).
+  function packGuillotine(boardW, boardH, items, allowRotate) {
+    let free = [{x:0,y:0,w:boardW,h:boardH}];
+    const placed = [];
+    const areaBoard = boardW * boardH;
+    let areaUsed = 0;
+
+    // Ordenar piezas por lado mayor (desc) y luego área
+    items.sort((a,b)=>{
+      const ma = Math.max(a.w, a.h), mb = Math.max(b.w, b.h);
+      if (mb !== ma) return mb - ma;
+      return (b.w*b.h) - (a.w*a.h);
+    });
+
+    function tryPlace(it) {
+      let best = null; // {idx, rot, waste, fw, fh}
+      for (let i=0;i<free.length;i++) {
+        const fr = free[i];
+
+        // Sin rotar
+        if (it.w <= fr.w && it.h <= fr.h) {
+          const waste = (fr.w*fr.h) - (it.w*it.h);
+          // criterio: minimizar desperdicio, y de empate, minimizar lado sobrante max
+          const leftoverMax = Math.max(fr.w-it.w, fr.h-it.h);
+          const score = waste*10000 + leftoverMax*100; // peso
+          if (!best || score < best.score) best = {idx:i, rot:false, score, fw:fr.w, fh:fr.h};
+        }
+        // Rotando
+        if (allowRotate && it.h <= fr.w && it.w <= fr.h) {
+          const waste = (fr.w*fr.h) - (it.w*it.h);
+          const leftoverMax = Math.max(fr.w-it.h, fr.h-it.w);
+          const score = waste*10000 + leftoverMax*100 + 1; // pequeño sesgo
+          if (!best || score < best.score) best = {idx:i, rot:true, score, fw:fr.w, fh:fr.h};
         }
       }
+      if (!best) return false;
 
-      // Definir una función para verificar si un pedazo puede ser colocado en una posición
-      function puedeColocar(pedazo, x, y) {
-        // Verificar si el pedazo cabe en la posición
-        if (x + pedazo.ancho > anchoMadera || y + pedazo.alto > altoMadera) {
-          return false;
-        }
+      // Colocar en la esquina del rect libre escogido
+      const fr = free[best.idx];
+      const pw = best.rot ? it.h : it.w;
+      const ph = best.rot ? it.w : it.h;
 
-        // Verificar si la posición está ocupada por otro pedazo
-        for (var i = y; i < y + pedazo.alto; i++) {
-          for (var j = x; j < x + pedazo.ancho; j++) {
-            if (matriz[i][j] !== 0) {
-              return false;
-            }
+      placed.push({
+        name: it.name,
+        x: fr.x,
+        y: fr.y,
+        w: pw,
+        h: ph,
+        colorIndex: it.colorIndex,
+        rotated: best.rot
+      });
+      areaUsed += pw*ph;
+
+      // Partición guillotine: crear dos rectángulos libres (derecha y abajo)
+      const right = { x: fr.x + pw, y: fr.y, w: fr.w - pw, h: ph };
+      const bottom = { x: fr.x, y: fr.y + ph, w: fr.w, h: fr.h - ph };
+
+      // Reemplazar el free-rect usado por los nuevos (si tienen tamaño positivo)
+      free.splice(best.idx,1);
+      if (right.w > 0 && right.h > 0) free.push(right);
+      if (bottom.w > 0 && bottom.h > 0) free.push(bottom);
+
+      // Fusión simple: eliminar rectángulos libres contenidos dentro de otros
+      // (barato y ayuda a reducir fragmentación)
+      free = pruneContained(free);
+
+      return true;
+    }
+
+    function pruneContained(list) {
+      return list.filter((a, i) => {
+        for (let j=0; j<list.length; j++) {
+          if (i===j) continue;
+          const b = list[j];
+          if (a.x >= b.x && a.y >= b.y && a.x+a.w <= b.x+b.w && a.y+a.h <= b.y+b.h) {
+            return false; // a está contenido en b
           }
         }
-
         return true;
-      }
-
-      // Colocar los pedazos en la madera
-      var posiciones = [];
-      for (var k = 0; k < pedazos.length; k++) {
-        var pedazo = pedazos[k];
-        var colocado = false;
-
-        // Probar todas las posibles posiciones para el pedazo
-        for (var i = 0; i < altoMadera; i++) {
-          for (var j = 0; j < anchoMadera; j++) {
-            if (puedeColocar(pedazo, j, i)) {
-              // Colocar el pedazo en la posición
-              for (var m = i; m < i + pedazo.alto; m++) {
-                for (var n = j; n < j + pedazo.ancho; n++) {
-                  matriz[m][n] = k + 1; // Usar números distintos para cada pedazo
-                }
-              }
-              posiciones.push({ x: j, y: i });
-              colocado = true;
-              break;
-            }
-          }
-          if (colocado) {
-            break;
-          }
-        }
-
-        // Si el pedazo no pudo ser colocado, retornar null
-        if (!colocado) {
-          return null;
-        }
-      }
-
-      return posiciones;
+      });
     }
 
-    // Definir una función para manejar el evento submit del formulario
-    function handleSubmit(event) {
-      event.preventDefault();
-
-      var altoMadera = parseInt(document.getElementById("alto").value);
-      var anchoMadera = parseInt(document.getElementById("ancho").value);
-      var grosorMadera = parseInt(document.getElementById("grosor").value);
-
-      var p1Medidas = validarMedidas(document.getElementById("p1").value);
-      var p2Medidas = validarMedidas(document.getElementById("p2").value);
-      var p3Medidas = validarMedidas(document.getElementById("p3").value);
-
-      if (isNaN(altoMadera) || isNaN(anchoMadera) || isNaN(grosorMadera) || !p1Medidas || !p2Medidas || !p3Medidas) {
-        alert("Por favor, ingresa valores válidos para las medidas.");
-        return;
-      }
-
-      limpiarCanvas();
-
-      var pedazos = [p1Medidas, p2Medidas, p3Medidas];
-      var posiciones = calcularCorte(altoMadera, anchoMadera, grosorMadera, pedazos);
-
-      if (posiciones === null) {
-        alert("No es posible realizar el corte con los pedazos dados.");
-        return;
-      }
-
-      dibujarRegla(anchoMadera, altoMadera);
-
-      for (var i = 0; i < posiciones.length; i++) {
-        var pos = posiciones[i];
-        var pedazo = pedazos[i];
-        dibujarRectangulo(pos.x * 30, pos.y * 30, pedazo.ancho * 30, pedazo.alto * 30, colores[i], (i + 1) + " (" + pedazo.alto + "x" + pedazo.ancho + "x" + pedazo.grosor + ")");
+    for (const it of items) {
+      if (!tryPlace(it)) {
+        // no cabe esta pieza -> queda sin ubicar
+        it.failed = true;
       }
     }
 
-    // Agregar el event listener al formulario
-    var form = document.getElementById("formulario");
-    form.addEventListener("submit", handleSubmit);
-  </script>
+    const placedCount = placed.length;
+    const util = areaUsed / areaBoard;
+    const failed = items.filter(i=>i.failed);
+
+    return { placed, util, placedCount, failed };
+  }
+
+  // --- Submit ---
+  $('#form').addEventListener('submit', (ev)=>{
+    ev.preventDefault();
+    const boardW = num($('#boardW').value);
+    const boardH = num($('#boardH').value);
+    const boardT = num($('#boardT').value);
+    const allowRotate = $('#allowRotate').checked;
+
+    const msg = $('#msg');
+    msg.textContent = '';
+
+    if (!(boardW>0 && boardH>0)) {
+      msg.innerHTML = `<span class="bad">La tabla debe tener ancho y alto mayores que cero.</span>`;
+      return;
+    }
+
+    // Construir items desde la tabla
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+    const items = [];
+    let colorIndex = 0;
+
+    for (const tr of rows) {
+      const tds = tr.querySelectorAll('td');
+      const name = tds[0].querySelector('input').value.trim() || `Pieza`;
+      const w = num(tds[1].querySelector('input').value);
+      const h = num(tds[2].querySelector('input').value);
+      const q = Math.max(0, Math.floor(num(tds[3].querySelector('input').value)));
+      const rot = tds[4].querySelector('input').checked;
+      if (!(w>0 && h>0 && q>0)) continue;
+
+      for (let i=0;i<q;i++) {
+        items.push({ name, w, h, colorIndex, rot });
+      }
+      colorIndex++;
+    }
+
+    if (items.length===0) {
+      msg.innerHTML = `<span class="warn">Agrega al menos un pedazo con cantidad &gt; 0.</span>`;
+      drawBoard(boardW, boardH, []);
+      updateLegend([]);
+      $('#utilPct').textContent = '—';
+      $('#wastePct').textContent = '—';
+      $('#placedCount').textContent = '—';
+      return;
+    }
+
+    // El permitir rotación por pieza es "rot global AND rot por pieza"
+    const prepared = items.map(it => ({...it}));
+    const allow = (it) => (allowRotate && it.rot);
+
+    const result = packGuillotine(boardW, boardH, prepared, {
+      get [Symbol.toStringTag]() { return 'AllowRotateProxy'; }
+    } ? (it)=>allow(it) : allowRotate);
+
+    // NOTA: el packGuillotine arriba espera booleano, así que normalizamos:
+    const res2 = packGuillotine(boardW, boardH, prepared, true && allowRotate);
+
+    // Dibujo y métricas
+    drawBoard(boardW, boardH, res2.placed);
+    updateLegend(res2.placed);
+
+    const utilPct = (res2.util*100);
+    $('#utilPct').textContent = isFinite(utilPct) ? utilPct.toFixed(1)+' %' : '—';
+    $('#wastePct').textContent = isFinite(utilPct) ? (100-utilPct).toFixed(1)+' %' : '—';
+    $('#placedCount').textContent = `${res2.placedCount}/${items.length}`;
+
+    if (res2.failed.length) {
+      const names = [...new Set(res2.failed.map(f=>`${f.name} ${f.w}×${f.h}`))].join(', ');
+      msg.innerHTML = `<span class="warn">No entraron ${res2.failed.length} pieza(s): ${names}.</span>`;
+    } else {
+      msg.innerHTML = `<span class="good">¡Todas las piezas fueron colocadas!</span>`;
+    }
+  });
+
+  // Estado inicial
+  addPieceRow();
+  addPieceRow();
+  drawBoard(200,120,[]);
+})();
+</script>
 </body>
 </html>
