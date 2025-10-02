@@ -32,7 +32,8 @@ Usa un algoritmo heurístico tipo *guillotine* para ubicar los pedazos y muestra
 
 ## 📸 Capturas
 
-*(Agregá aquí tus screenshots del canvas con distintos cortes.)*
+<img width="1327" height="612" alt="image" src="https://github.com/user-attachments/assets/5a53f0fc-0c4c-4185-bc05-1fd956230db4" />
+
 
 ---
 
