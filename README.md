@@ -28,6 +28,7 @@ Usa un algoritmo heurístico tipo *guillotine* para ubicar los pedazos y muestra
 4. Hacé click en **Calcular corte**.
 5. El resultado aparece en el canvas con la disposición óptima y métricas.
 
+👉 **[Ver demo en vivo](https://cortarmaderas.vercel.app/)**
 ---
 
 ## 📸 Capturas
